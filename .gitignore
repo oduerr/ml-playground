@@ -56,3 +56,11 @@ docs/_build/
 # PyBuilder
 target/
 .Rproj.user
+
+R/.Rhistory
+
+R/Untitled/header_lsg.tex
+
+python/SVM/.ipynb_checkpoints*
+
+python/XVal/.ipynb_checkpoints/Simulation K-Fold-checkpoint.ipynb
