@@ -1,0 +1,33 @@
+---
+title: "Probability forecast in SVM"
+author: "Oliver Dürr"
+date: "5/15/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## SVM 
+Here we create data with the margin from -1 to 1, separating the two classes. 
+```{r}
+library(e1071)
+#x = c(-3,-2,-1,1,2,3)
+x = c(seq(-2,-1,0.1),seq(1,2,0.1))
+y = as.factor(x > 0)  #Left class1 right class 2
+model = svm(x, y, scale=FALSE, kernel = 'linear', probability = TRUE)
+x_pred = seq(-3,3,0.1)
+res = predict(model, x_pred, probability = TRUE)
+#I guess there is a more elegant way to get the attributes
+probs = attributes(res)$probabilities
+plot(x_pred, probs[,2])
+```
+```{r}
+library(nnet)
+res = multinom(y ~ x, data.frame(y=y,x=x))
+predict(res, type='prob', data=data.frame(x=x_pred))
+```
+
