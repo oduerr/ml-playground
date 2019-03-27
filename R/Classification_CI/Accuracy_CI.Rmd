@@ -1,0 +1,157 @@
+---
+title: "Accuracy_CI"
+author: "Oliver Dürr"
+date: "3/27/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Accuracy CI (not weighted)
+
+### Creation of some random data
+
+```{r}
+  create_preds = function(y_true) {
+    weights = nclasses/n
+    y_pred = y_true
+    for (i in 1:length(y_pred)) {
+      # Get a random index in 20 precent
+      if (sample(c(TRUE, FALSE),1, prob = c(0.2,0.8))) {
+        y_pred[i] = sample(c(1,2,3), size = 1, prob=weights)
+      }
+    } 
+    return (y_pred)
+  }
+
+  nclasses = c(10,100,200) #Number of classes in the training set 
+  n = sum(nclasses)
+  y_true = c(rep(1, nclasses[1]), rep(2, nclasses[2]), rep(3, nclasses[3])) #True_labels in the testset
+  y_pred = create_preds(y_true)
+  acc = mean(y_pred == y_true) 
+```
+The single sample of random dataset has an accuracy of `r acc`.
+
+### Getting the true distribution of the accuracy
+```{r}
+ accs = rep(NA, 1500)
+ for (r in 1:length(accs)) {
+   y_pred = create_preds(y_true)
+   accs[r] = mean(y_pred == y_true) 
+ }
+ hist(accs, sqrt(length(accs)))
+```
+```{r}
+  q2 = quantile(accs, 0.975) 
+  q1 = quantile(accs, 0.025)
+  novel_sample= c(q1,q2)
+  ci_sample = q2 - q1
+```
+
+The sampled 95% CI should be approx from `r q1` to `r q2` and the range `r ci_sample`.
+
+### Calculating the CI for the accuracy (Willson Method) 
+
+First, we use the Wilson score intervall, see e.g. https://machinelearningmastery.com/report-classifier-performance-confidence-intervals/
+
+```{r}
+  acc_ci = acc + c(qnorm(0.025), qnorm(0.975)) * sqrt( (acc * (1 - acc)) / n)
+  cat(acc_ci, acc_ci[2]-acc_ci[1])
+```
+### Calculating the CI using bootstrap
+```{r}
+  library(boot)
+  df = data.frame(y_true, y_pred)
+  acc.func = function(data, ind) {
+    mean(y_true[ind] == y_pred[ind])
+  }
+  r.boot <- boot(df, R = 1000, statistic = acc.func)
+  r.boot
+```
+#### Calculation of the CI 
+
+We now calculate the CI from the bootstrap samples using different techniques:
+
+* Assuming a normal distribution (like in the Wilson CI)
+* Using the quantiles
+* Using a method called BCA (I forget what that was)
+
+```{r}
+  se = sd(r.boot$t)
+  ci_norm = r.boot$t0 + c(qnorm(0.025), qnorm(0.975)) * se
+  d = boot.ci(boot.out = r.boot, conf = 0.95, type = "bca")
+  ci_quant = quantile(r.boot$t, c(0.025, 0.975))
+  ci_bca = c(d$bca[4],d$bca[5]) 
+  res_df = data.frame(ci_norm, ci_quant, ci_bca, wilson_ci = acc_ci, novel_sample)
+  res_df = rbind(res_df, res_df[2,] - res_df[1,])
+  rownames(res_df)[3] = 'range of CI'
+  res_df
+```
+
+Looks like that the bootstrap CI shows a lower accuracy than the Willson and Novel Sample
+
+
+
+## Accuracy CI (Weighted)
+Now we calculate the weighted accuracy. We do this by calculating the accuracys for the individal classes.
+
+```{r}
+  # We use ind to compatible with the bootstrap version
+  acc.func = function(data, ind) {
+    #ind = 1:310
+    y_t = data$y_true[ind]
+    y_p = data$y_pred[ind]
+    acc = 0
+    for (clazz in 1:3) {
+      idx = y_t == clazz
+      acc = acc + mean(y_t[idx] == y_p[idx])
+    }
+    return (acc / 3)
+  }
+  acc.func(df, 1:n)
+```
+
+#### Sampling on new data
+```{r}
+   accs_w = rep(NA, 1000)
+   for (r in 1:length(accs_w)) {
+     y_pred = create_preds(y_true)
+     accs_w[r] = acc.func(data.frame(y_true, y_pred), 1:310)
+   }
+   hist(accs_w, sqrt(length(accs_w)))
+```
+
+And calulating the accuracy 
+```{r}
+  q2_w = quantile(accs_w, 0.975) 
+  q1_w = quantile(accs_w, 0.025)
+  novel_sample_w= c(q1_w,q2_w)
+  ci_sample = q2_w - q1_w
+```
+The sampled 95% CI should be approx from `r q1` to `r q2` and the range `r ci_sample`.
+
+
+#### Bootstrapping
+```{r}
+  library(boot)
+  r.boot <- boot(data.frame(y_true, y_pred), R = 1000, statistic = acc.func)
+  r.boot
+```
+```{r}
+  se = sd(r.boot$t)
+  ci_norm = r.boot$t0 + c(qnorm(0.025), qnorm(0.975)) * se
+  d = boot.ci(boot.out = r.boot, conf = 0.95, type = "bca")
+  ci_quant = quantile(r.boot$t, c(0.025, 0.975))
+  ci_bca = c(d$bca[4],d$bca[5]) 
+  res_df_w = data.frame(ci_norm, ci_quant, ci_bca,novel_sample_w)
+  res_df_w = rbind(res_df_w, res_df_w[2,] - res_df_w[1,])
+  rownames(res_df_w)[3] = 'range of CI'
+  res_df_w
+```
+
+
+
