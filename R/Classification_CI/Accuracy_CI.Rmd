@@ -54,9 +54,9 @@ The single sample of random dataset has an accuracy of `r acc`.
 
 The sampled 95% CI should be approx from `r q1` to `r q2` and the range `r ci_sample`.
 
-### Calculating the CI for the accuracy (Willson Method) 
+### Calculating the CI for the accuracy (Wald Method) 
 
-First, we use the Wilson score intervall, see e.g. https://machinelearningmastery.com/report-classifier-performance-confidence-intervals/
+First, we use the Wald intervall, see e.g. https://machinelearningmastery.com/report-classifier-performance-confidence-intervals/
 
 ```{r}
   acc_ci = acc + c(qnorm(0.025), qnorm(0.975)) * sqrt( (acc * (1 - acc)) / n)
@@ -83,8 +83,13 @@ We now calculate the CI from the bootstrap samples using different techniques:
 ```{r}
   se = sd(r.boot$t)
   ci_norm = r.boot$t0 + c(qnorm(0.025), qnorm(0.975)) * se
-  d = boot.ci(boot.out = r.boot, conf = 0.95, type = "bca")
   ci_quant = quantile(r.boot$t, c(0.025, 0.975))
+  d = boot.ci(boot.out = r.boot, conf = 0.95, type = "bca")
+  
+  dd = boot.ci(boot.out = r.boot, conf = 0.95, type = "norm")
+  dd$normal[2:3] - ci_norm
+  
+  
   ci_bca = c(d$bca[4],d$bca[5]) 
   res_df = data.frame(ci_norm, ci_quant, ci_bca, wilson_ci = acc_ci, novel_sample)
   res_df = rbind(res_df, res_df[2,] - res_df[1,])
@@ -106,11 +111,11 @@ Now we calculate the weighted accuracy. We do this by calculating the accuracys 
     y_t = data$y_true[ind]
     y_p = data$y_pred[ind]
     acc = 0
-    for (clazz in 1:3) {
+    for (clazz in unique(df$y_true)) {
       idx = y_t == clazz
       acc = acc + mean(y_t[idx] == y_p[idx])
     }
-    return (acc / 3)
+    return (acc / length(unique(df$y_true)))
   }
   acc.func(df, 1:n)
 ```
@@ -131,6 +136,8 @@ And calulating the accuracy
   q1_w = quantile(accs_w, 0.025)
   novel_sample_w= c(q1_w,q2_w)
   ci_sample = q2_w - q1_w
+  mean(accs_w)
+  median(accs_w)
 ```
 The sampled 95% CI should be approx from `r q1` to `r q2` and the range `r ci_sample`.
 
@@ -152,6 +159,64 @@ The sampled 95% CI should be approx from `r q1` to `r q2` and the range `r ci_sa
   rownames(res_df_w)[3] = 'range of CI'
   res_df_w
 ```
+## Real Data
+
+Loading validation
+```{r}
+  #library(RcppCNPy)
+  load("/Users/oli/Dropbox/__ZHAW/__Projekte_Post_ZHAH/Arthritis/paper_resubmission/CI/validation.rda")
+  #df = data.frame(y_true = val_df$y_true_val, y_pred=val_df$y_pred_val_ce)
+  df = data.frame(y_true = val_df$y_true_val, y_pred=val_df$y_pred_val_weighted_ce)
+```
+
+```{r}
+  mean(df$y_true == df$y_pred)
+```
+```{r}
+  library(caret)
+  mean(df$y_true == df$y_pred)
+  (cm = confusionMatrix(as.factor(df$y_true), as.factor(df$y_pred)))
+```
+```{r}
+  d = cm$table / rowSums(cm$table)
+  dd = 0
+  for (i in 1:6) {
+    dd = dd + d[i,i]
+  }
+  dd / 6
+  d
+```
+```{r}
+  d = rep(NA,6)
+  for (i in 0:5) {
+    idx = df$y_true == i
+    d[i+1] = mean(df$y_true[idx] == df$y_pred[idx])  
+  }
+  mean(d)
+  acc.func(df, 1:nrow(df))
+```
+
+
+
+```{r}
+  library(boot)
+  r.boot <- boot(df, R = 1000, statistic = acc.func)
+  r.boot
+```
+
+```{r}
+  se = sd(r.boot$t)
+  ci_norm = r.boot$t0 + c(qnorm(0.025), qnorm(0.975)) * se
+  #d = boot.ci(boot.out = r.boot, conf = 0.95, type = "bca") #not workting on that data
+  ci_quant = quantile(r.boot$t, c(0.025, 0.975))
+  #ci_bca = c(d$bca[4],d$bca[5]) 
+  res_df_w = data.frame(ci_norm, ci_quant)
+  res_df_w = rbind(res_df_w, res_df_w[2,] - res_df_w[1,])
+  rownames(res_df_w)[3] = 'range of CI'
+  res_df_w
+```
+
+
 
 
 
