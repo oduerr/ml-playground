@@ -1,0 +1,75 @@
+---
+title: "DiffusionModel"
+format: html
+editor: visual
+---
+
+```{r setup}
+library(tidyverse)
+
+```
+
+## Simulation of the Transition Kernel
+
+To understand the transition kernel, we start with a Gaussian
+
+$$
+x_{t-1} \sim N(\mu_{t-1}, \sigma_{t-1}) \\
+$$We sample a single number from that Gaussian and apply the transition kernel:
+
+$$
+ q(x_t|x_{t-1})=N(\sqrt{1-\beta_t} x_t,\beta_t)
+$$ We can sample this in two steps as done in the following code
+
+```{r}
+library(car)
+N = 1e4
+xtm1 = rnorm(N, mean = 1.42, sd=0.5)    # The values of x @ t-1
+beta = 0.5
+xt =  rnorm(N, sqrt(1-beta)*xtm1, beta) # The transformation
+cat(paste0('mu_t ', mean(xt), '  sd=',sd(xt)))
+sqrt(beta^2 + 0.5^2)
+qqPlot(xt, main=expression('x_t is Gaussian Distributed'))
+```
+
+We now make several steps after another
+
+```{r}
+library(ggridges)
+N = 1e4
+steps = 10
+beta = 0.4
+xt = rnorm(N, 10.42, 0.5)  
+t = 0.
+df = data.frame(
+  t = t,
+  xt = xt
+)
+for (i in 1:steps) {
+  t = t + 1
+  xt =  rnorm(N, sqrt(1-beta)*xt, beta) # The transformation
+  df = bind_rows(df, data.frame(t=t, xt=xt))
+}
+ggplot(df, aes(x=xt, y=as.factor(t))) + geom_density_ridges()
+mean(xt)
+sd(xt)
+```
+
+We see that we converge to 0, lets do many more steps
+
+```{r}
+library(ggridges)
+N = 1e5
+steps = 100
+beta = 0.8
+xt = rnorm(N, 10.42, 0.5)  
+t = 0.
+for (i in 1:steps) {
+  t = t + 1
+  xt =  rnorm(N, sqrt(1-beta)*xt, beta) # The transformation
+  #df = bind_rows(df, data.frame(t=t, xt=xt))
+}
+ggplot(data.frame(t=t, xt=xt)) + geom_density(aes(x=xt))
+mean(xt)
+sd(xt)
+```
