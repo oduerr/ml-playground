@@ -1,0 +1,69 @@
+from matplotlib import pyplot as plt
+from pyro.distributions import LogNormal, HalfNormal, Normal, Uniform
+import torch
+import numpy as np
+import pandas as pd
+import pyro
+import seaborn as sns
+
+def model(A_obs, N):
+    #Defining the priors (no data needed)
+    b = pyro.sample("b", Normal(torch.zeros(2), torch.ones(2)))
+    s = pyro.sample("s", LogNormal(torch.zeros(2), torch.ones(2) * 0.5))
+    sigma = pyro.sample("sigma",  HalfNormal(0.2))
+    theta = pyro.sample("theta", Uniform(-np.pi, np.pi).expand([N]).to_event(1))
+    A = torch.zeros(N, 2)
+    for i in range(0, N):
+        A[i, 0] = b[0] + s[0] * torch.cos(theta[i])
+        A[i, 1] = b[1] + s[1] * torch.sin(theta[i])
+
+    # Defining the likelihood p(A_obs|A) for in general p(Data | Parameters)
+    with pyro.plate("data", N):
+        pyro.sample("x", Normal(A[:, 0], sigma), obs=A_obs[:,0])
+        pyro.sample("y", Normal(A[:, 1], sigma), obs=A_obs[:,1])
+
+if __name__ == '__main__':
+
+    X = pd.read_csv('half_circle.csv');
+    A_obs = torch.tensor(np.array(X))
+    N = A_obs.shape[0]
+
+    # Just for demo (stepping through the model)
+    model(A_obs, N)
+
+    #### MCMC ####
+    from pyro.infer import MCMC, NUTS
+    nuts_kernel = NUTS(model)
+    mcmc = MCMC(nuts_kernel, num_samples=100)
+    mcmc.run(A_obs, N)
+
+    mcmc.summary() #Diagnosis
+    bx = mcmc.get_samples()["b"][:, 0]
+
+    # Plot the density of the posterior b[0]
+    plt.hist(bx, density=True)
+    plt.xlabel("bx")
+    plt.ylabel("Density")
+    sns.kdeplot(bx, shade=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
