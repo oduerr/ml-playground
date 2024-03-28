@@ -70,3 +70,8 @@ python/XVal/.ipynb_checkpoints/Simulation K-Fold-checkpoint.ipynb
 python/DimRed/tSNE.jpg
 
 python/.idea/*
+.Rhistory
+.DS_Store
+.Rhistory
+/.idea
+*.Rhistory
