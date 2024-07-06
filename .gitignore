@@ -75,3 +75,6 @@ python/.idea/*
 .Rhistory
 /.idea
 *.Rhistory
+python/2nd_order_optimization/model_org.keras
+R/DiffusionModel/.Rhistory
+.Rhistory
