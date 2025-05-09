@@ -78,3 +78,8 @@ python/.idea/*
 python/2nd_order_optimization/model_org.keras
 R/DiffusionModel/.Rhistory
 .Rhistory
+.Rhistory
+R/WeatherDemo/.Rhistory
+.lintr
+R/WeatherDemo/.Rhistory
+R/DiffusionModel/.Rhistory

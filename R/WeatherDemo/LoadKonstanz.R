@@ -11,9 +11,11 @@ HH = selectDWD('Hamburg-Fuhlsbuettel', res='daily', var='kl', per='recent')
 HH = dataDWD(HH, read = TRUE, varnames=TRUE)
 HH$ort = 'HH'
 
-KN = selectDWD('Konstanz', res='daily', var='kl', per='recent')
-KN = dataDWD(KN, read = TRUE, varnames=TRUE)
+KN_pos = selectDWD('Konstanz', res='daily', var='kl', per='recent')
+KN_pos
+KN = dataDWD(KN_pos, read = TRUE, varnames=TRUE)
 KN$ort = 'KN'
+findID('Konstanz')
 
 df = bind_rows(KN, HH)
 

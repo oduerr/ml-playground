@@ -1,0 +1,24 @@
+---
+title: "Wetter_KN"
+format: pdf
+editor: visual
+---
+
+## Loading of Konstanz
+
+```{r}
+library(rdwd)
+id = findID('Konstanz')
+id
+KN_pos = selectDWD(id=id, res='hourly',  per='recent', var='air_temperature') 
+print(KN_pos)
+KN_recent = dataDWD(KN_pos, read = TRUE, varnames=TRUE)
+```
+
+You can add options to executable code like this
+
+```{r}
+plot(KN_recent$MESS_DATUM, KN_recent$TT_TU.Lufttemperatur, type='l', xlab='Time', ylab='Temperature (°C)')
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
